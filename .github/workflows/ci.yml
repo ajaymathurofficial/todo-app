@@ -1,4 +1,4 @@
-name: Zero Downtime Deploy to AWS
+name: Smart Zero Downtime Deploy
 
 on:
   push:
@@ -10,10 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
-
-      - name: Deploy Blue Green to EC2
+      - name: Deploy
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
@@ -21,25 +18,28 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd /home/ubuntu/todo-app
-
             git pull origin main
-
             sudo docker build -t todo-app .
 
-            sudo docker stop todo-green || true
-            sudo docker rm todo-green || true
+            if grep -q 3001 /etc/nginx/sites-available/default; then
+              TARGET=green
+              PORT=3002
+              OLDPORT=3001
+            else
+              TARGET=blue
+              PORT=3001
+              OLDPORT=3002
+            fi
 
-            sudo docker run -d -p 3002:3000 --name todo-green todo-app
+            sudo docker stop todo-$TARGET || true
+            sudo docker rm todo-$TARGET || true
+
+            sudo docker run -d -p $PORT:3000 --name todo-$TARGET todo-app
 
             sleep 10
 
-            sudo sed -i 's/3001/3002/g' /etc/nginx/sites-available/default
+            curl http://localhost:$PORT || exit 1
 
+            sudo sed -i "s/$OLDPORT/$PORT/g" /etc/nginx/sites-available/default
             sudo nginx -t
-
             sudo systemctl reload nginx
-
-            sudo docker stop todo-blue || true
-            sudo docker rm todo-blue || true
-
-            sudo docker rename todo-green todo-blue
