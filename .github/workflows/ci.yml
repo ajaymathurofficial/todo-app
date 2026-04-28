@@ -1,4 +1,4 @@
-name: Auto Deploy to AWS
+name: Zero Downtime Deploy to AWS
 
 on:
   push:
@@ -13,7 +13,7 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Deploy to EC2
+      - name: Deploy Blue Green to EC2
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.HOST }}
@@ -21,8 +21,25 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           script: |
             cd /home/ubuntu/todo-app
+
             git pull origin main
-            sudo docker stop todo-container || true
-            sudo docker rm todo-container || true
+
             sudo docker build -t todo-app .
-            sudo docker run -d -p 80:3000 --name todo-container todo-app
+
+            sudo docker stop todo-green || true
+            sudo docker rm todo-green || true
+
+            sudo docker run -d -p 3002:3000 --name todo-green todo-app
+
+            sleep 10
+
+            sudo sed -i 's/3001/3002/g' /etc/nginx/sites-available/default
+
+            sudo nginx -t
+
+            sudo systemctl reload nginx
+
+            sudo docker stop todo-blue || true
+            sudo docker rm todo-blue || true
+
+            sudo docker rename todo-green todo-blue
