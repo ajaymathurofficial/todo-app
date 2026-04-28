@@ -7,10 +7,10 @@ let todos = [];
 
 app.get("/", (req, res) => {
   let html = `
-    <h1>Todo App</h1>
+    <h1>Todo App V2 </h1>
 
     <form method="POST" action="/add">
-      <input type="text" name="task" placeholder="Enter task" required />
+      <input type="text" name="task" placeholder="Enter Your task here" required />
       <button>Add Task</button>
     </form>
 
