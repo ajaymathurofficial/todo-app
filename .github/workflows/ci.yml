@@ -36,9 +36,11 @@ jobs:
 
             sudo docker run -d -p $PORT:3000 --name todo-$TARGET todo-app
 
-            sleep 10
-
-            curl http://localhost:$PORT || exit 1
+            for i in {1..10}; do
+            curl -f http://localhost:$PORT && break
+            echo "Waiting for app..."
+            sleep 5
+            done
 
             sudo sed -i "s/$OLDPORT/$PORT/g" /etc/nginx/sites-available/default
             sudo nginx -t
