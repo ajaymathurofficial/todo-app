@@ -34,8 +34,7 @@ jobs:
             sudo docker stop todo-$TARGET || true
             sudo docker rm todo-$TARGET || true
 
-            sudo docker run -d -p $PORT:3000 --name todo-$TARGET todo-app
-
+            sudo docker run -d --restart unless-stopped -p $PORT:3000 --name todo-$TARGET todo-app
             for i in {1..10}; do
             curl -f http://localhost:$PORT && break
             echo "Waiting for app..."
